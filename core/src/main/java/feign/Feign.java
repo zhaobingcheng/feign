@@ -198,6 +198,7 @@ public abstract class Feign {
     }
 
     public Feign build() {
+      //丰富、增强，针对构建器的属性，即插件
       super.enrich();
 
       MethodHandler.Factory<Object> synchronousMethodHandlerFactory =

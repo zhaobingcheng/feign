@@ -55,9 +55,11 @@ public abstract class BaseBuilder<B extends BaseBuilder<B>> {
 
   public BaseBuilder() {
     super();
+    //对抽象父类的子类实现的实例进行统一强转
     thisB = (B) this;
   }
 
+  //返回子类实现而不是抽象类自身
   public B logLevel(Logger.Level logLevel) {
     this.logLevel = logLevel;
     return thisB;

@@ -147,6 +147,10 @@ public class Util {
     // for synthetic methods. As a result, it picks up overridden methods as well as actual default
     // methods.
     final int SYNTHETIC = 0x00001000;
+    //1000000000000//SYNTHETIC标识编译器生成的方法
+    //0010000000000//ABSTRACT
+    //0000000000001//PUBLIC
+    //0000000001000//STATIC
     return ((method.getModifiers()
         & (Modifier.ABSTRACT | Modifier.PUBLIC | Modifier.STATIC | SYNTHETIC)) == Modifier.PUBLIC)
         && method.getDeclaringClass().isInterface();

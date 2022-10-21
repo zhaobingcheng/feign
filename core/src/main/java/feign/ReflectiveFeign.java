@@ -63,6 +63,7 @@ public class ReflectiveFeign<C> extends Feign {
       if (method.getDeclaringClass() == Object.class) {
         continue;
       } else if (Util.isDefault(method)) {
+        //default方法
         DefaultMethodHandler handler = new DefaultMethodHandler(method);
         defaultMethodHandlers.add(handler);
         methodToHandler.put(method, handler);
@@ -70,10 +71,13 @@ public class ReflectiveFeign<C> extends Feign {
         methodToHandler.put(method, nameToHandler.get(Feign.configKey(target.type(), method)));
       }
     }
+    //参见下方FeignInvocationHandler类
     InvocationHandler handler = factory.create(target, methodToHandler);
+    //动态代理生成请求模板接口的实现类实例
     T proxy = (T) Proxy.newProxyInstance(target.type().getClassLoader(),
         new Class<?>[] {target.type()}, handler);
 
+    //default方法情况下的额外处理
     for (DefaultMethodHandler defaultMethodHandler : defaultMethodHandlers) {
       defaultMethodHandler.bindTo(proxy);
     }
@@ -90,6 +94,7 @@ public class ReflectiveFeign<C> extends Feign {
       this.dispatch = checkNotNull(dispatch, "dispatch for %s", target);
     }
 
+    //调用被代理接口的方法时会调用到相应方法的MethodHandler对象
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
       if ("equals".equals(method.getName())) {
@@ -106,6 +111,7 @@ public class ReflectiveFeign<C> extends Feign {
         return toString();
       }
 
+      //MethodHandler的invoke方法
       return dispatch.get(method).invoke(args);
     }
 
@@ -157,11 +163,13 @@ public class ReflectiveFeign<C> extends Feign {
     }
 
     public Map<String, MethodHandler> apply(Target target, C requestContext) {
+      //解析接口模板类获得各个代表接口调用的方法元数据
       List<MethodMetadata> metadata = contract.parseAndValidateMetadata(target.type());
       Map<String, MethodHandler> result = new LinkedHashMap<String, MethodHandler>();
       for (MethodMetadata md : metadata) {
         BuildTemplateByResolvingArgs buildTemplate;
         if (!md.formParams().isEmpty() && md.template().bodyTemplate() == null) {
+          //表单参数不为空，body模板为空时
           buildTemplate =
               new BuildFormEncodedTemplateFromArgs(md, encoder, queryMapEncoder, target);
         } else if (md.bodyIndex() != null || md.alwaysEncodeBody()) {
@@ -170,10 +178,13 @@ public class ReflectiveFeign<C> extends Feign {
           buildTemplate = new BuildTemplateByResolvingArgs(md, queryMapEncoder, target);
         }
         if (md.isIgnored()) {
+          //要忽略的接口，比如spring contract里的加了ExceptionHandler注解的方法
+          //仅提供一个标志位操作及【忽略】约定，各自的协议对要忽略的方法自主操作该标记位
           result.put(md.configKey(), args -> {
             throw new IllegalStateException(md.configKey() + " is not a method handled by feign");
           });
         } else {
+          //创建SynchronousMethodHandler实例
           result.put(md.configKey(),
               factory.create(target, md, buildTemplate, options, decoder, errorDecoder,
                   requestContext));

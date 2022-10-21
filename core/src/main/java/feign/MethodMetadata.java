@@ -20,6 +20,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 import feign.Param.Expander;
 
+/**
+ * 接口模板中的信息
+ */
 public final class MethodMetadata implements Serializable {
 
   private static final long serialVersionUID = 1L;

@@ -113,6 +113,7 @@ final class SynchronousMethodHandler implements MethodHandler {
       if (logLevel != Logger.Level.NONE) {
         logger.logIOException(metadata.configKey(), logLevel, e, elapsedTime(start));
       }
+      //默认对IO异常抛出重试异常触发重试，注意这个静态方法
       throw errorExecuting(request, e);
     }
 

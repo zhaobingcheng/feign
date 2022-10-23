@@ -63,13 +63,16 @@ public class ResponseHandler {
         return disconnectResponseBodyIfNeeded(response);
       }
 
+      //不要将判断条件写在一个表达式里
       final boolean shouldDecodeResponseBody = (response.status() >= 200 && response.status() < 300)
           || (response.status() == 404 && dismiss404 && !isVoidType(returnType));
 
       if (!shouldDecodeResponseBody) {
+        //抛出错误（异常）解码器返回的异常，注意触发的条件：非2xx响应，且非404响应
         throw decodeError(configKey, response);
       }
 
+      //解码器正常解码
       return decode(response, returnType);
     } catch (final IOException e) {
       if (logLevel != Level.NONE) {
@@ -114,6 +117,7 @@ public class ResponseHandler {
 
   private Object decode(Response response, Type type) throws IOException {
     if (isVoidType(type)) {
+      //如果无需接收返回，则不执行解码器和响应拦截器逻辑（注意）
       ensureClosed(response.body());
       return null;
     }

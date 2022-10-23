@@ -66,6 +66,7 @@ final class SynchronousMethodHandler implements MethodHandler {
   public Object invoke(Object[] argv) throws Throwable {
     RequestTemplate template = buildTemplateFromArgs.create(argv);
     Options options = findOptions(argv);
+    //注意这个重试器是clone方法返回的
     Retryer retryer = this.retryer.clone();
     while (true) {
       try {
@@ -74,7 +75,9 @@ final class SynchronousMethodHandler implements MethodHandler {
         try {
           retryer.continueOrPropagate(e);
         } catch (RetryableException th) {
+          //重试结束
           Throwable cause = th.getCause();
+          //异常策略
           if (propagationPolicy == UNWRAP && cause != null) {
             throw cause;
           } else {
@@ -84,6 +87,7 @@ final class SynchronousMethodHandler implements MethodHandler {
         if (logLevel != Logger.Level.NONE) {
           logger.logRetry(metadata.configKey(), logLevel);
         }
+        //触发重试，继续下一轮请求，注意下一轮请求所执行的逻辑
         continue;
       }
     }
@@ -129,9 +133,11 @@ final class SynchronousMethodHandler implements MethodHandler {
   }
 
   Options findOptions(Object[] argv) {
+    //客户端级的
     if (argv == null || argv.length == 0) {
       return this.options;
     }
+    //请求级的
     return Stream.of(argv)
         .filter(Options.class::isInstance)
         .map(Options.class::cast)

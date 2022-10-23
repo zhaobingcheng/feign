@@ -138,14 +138,17 @@ public interface Contract {
           data.urlIndex(i);
         } else if (!isHttpAnnotation
             && !Request.Options.class.isAssignableFrom(parameterTypes[i])) {
+          //非http注解相关参数（即非@Param等注解，post请求模板参数无需注解，且非Request.Options类，该类非请求体数据模型）
           if (data.isAlreadyProcessed(i)) {
             checkState(data.formParams().isEmpty() || data.bodyIndex() == null,
                 "Body parameters cannot be used with form parameters.%s", data.warnings());
           } else if (!data.alwaysEncodeBody()) {
             checkState(data.formParams().isEmpty(),
                 "Body parameters cannot be used with form parameters.%s", data.warnings());
+            //body参数只能有一个
             checkState(data.bodyIndex() == null,
                 "Method has too many Body parameters: %s%s", method, data.warnings());
+            //标记该参数为body
             data.bodyIndex(i);
             data.bodyType(
                 Types.resolve(targetType, targetType, genericParameterTypes[i]));

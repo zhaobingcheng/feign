@@ -169,12 +169,14 @@ public class ReflectiveFeign<C> extends Feign {
       for (MethodMetadata md : metadata) {
         BuildTemplateByResolvingArgs buildTemplate;
         if (!md.formParams().isEmpty() && md.template().bodyTemplate() == null) {
-          //表单参数不为空，body模板为空时
+          //表单参数不为空（表单请求），body模板为空时
           buildTemplate =
               new BuildFormEncodedTemplateFromArgs(md, encoder, queryMapEncoder, target);
         } else if (md.bodyIndex() != null || md.alwaysEncodeBody()) {
+          //如果是有请求体参数的的模板方法，
           buildTemplate = new BuildEncodedTemplateFromArgs(md, encoder, queryMapEncoder, target);
         } else {
+          //其余，比如get请求模板
           buildTemplate = new BuildTemplateByResolvingArgs(md, queryMapEncoder, target);
         }
         if (md.isIgnored()) {

@@ -70,10 +70,10 @@ public interface Encoder {
   /**
    * Converts objects to an appropriate representation in the template.
    *
-   * @param object what to encode as the request body.
+   * @param object what to encode as the request body.请求体数据
    * @param bodyType the type the object should be encoded as. {@link #MAP_STRING_WILDCARD}
-   *        indicates form encoding.
-   * @param template the request template to populate.
+   *        indicates form encoding.请求体数据的类型
+   * @param template the request template to populate.请求模板
    * @throws EncodeException when encoding failed due to a checked exception.
    */
   void encode(Object object, Type bodyType, RequestTemplate template) throws EncodeException;

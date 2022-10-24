@@ -94,6 +94,7 @@ final class SynchronousMethodHandler implements MethodHandler {
   }
 
   Object executeAndDecode(RequestTemplate template, Options options) throws Throwable {
+    //根据请求模板生成本次请求，以及执行请求拦截器
     Request request = targetRequest(template);
 
     if (logLevel != Logger.Level.NONE) {
@@ -105,6 +106,7 @@ final class SynchronousMethodHandler implements MethodHandler {
     try {
       response = client.execute(request, options);
       // ensure the request is set. TODO: remove in Feign 12
+      //将请求也放入响应的对象中
       response = response.toBuilder()
           .request(request)
           .requestTemplate(template)

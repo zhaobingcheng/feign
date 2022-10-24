@@ -31,7 +31,9 @@ public interface Retryer extends Cloneable {
   class Default implements Retryer {
 
     private final int maxAttempts;
+    //基础停顿周期（毫秒），第一次重试的停顿时间
     private final long period;
+    //最大停顿周期（毫秒）
     private final long maxPeriod;
     int attempt;
     long sleptForMillis;
@@ -57,8 +59,10 @@ public interface Retryer extends Cloneable {
         throw e;
       }
 
+      //重试的停顿周期（毫秒）
       long interval;
       if (e.retryAfter() != null) {
+        //当要求重试的重试异常里携带有指定的重试时间戳时，就在该指定时间进行重试，但是仍旧受限于最大停顿周期
         interval = e.retryAfter().getTime() - currentTimeMillis();
         if (interval > maxPeriod) {
           interval = maxPeriod;
@@ -67,6 +71,7 @@ public interface Retryer extends Cloneable {
           return;
         }
       } else {
+        //默认情况下
         interval = nextMaxInterval();
       }
       try {
@@ -75,6 +80,7 @@ public interface Retryer extends Cloneable {
         Thread.currentThread().interrupt();
         throw e;
       }
+      //统计总停顿时间
       sleptForMillis += interval;
     }
 
@@ -86,6 +92,7 @@ public interface Retryer extends Cloneable {
      * @return time in milliseconds from now until the next attempt.
      */
     long nextMaxInterval() {
+      //每次重试，都会是前一次重试的停顿时间的1.5倍，直到超过最大停顿时间时，就定为最大停顿时间
       long interval = (long) (period * Math.pow(1.5, attempt - 1));
       return interval > maxPeriod ? maxPeriod : interval;
     }

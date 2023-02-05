@@ -47,17 +47,20 @@ public abstract class DeclarativeContract extends BaseContract {
    */
   @Override
   protected final void processAnnotationOnClass(MethodMetadata data, Class<?> targetType) {
+    //遍历api客户端模板接口上的注解，并从已注册的类注解处理器中选取可以处理这些注解的处理器
     final List<GuardedAnnotationProcessor> processors = Arrays.stream(targetType.getAnnotations())
         .flatMap(annotation -> classAnnotationProcessors.stream()
             .filter(processor -> processor.test(annotation)))
         .collect(Collectors.toList());
 
     if (!processors.isEmpty()) {
+      //如果有匹配的，依次用这些处理器处理这些注解
       Arrays.stream(targetType.getAnnotations())
           .forEach(annotation -> processors.stream()
               .filter(processor -> processor.test(annotation))
               .forEach(processor -> processor.process(annotation, data)));
     } else {
+      //否则加个警告信息
       if (targetType.getAnnotations().length == 0) {
         data.addWarning(String.format(
             "Class %s has no annotations, it may affect contract %s",
@@ -85,10 +88,12 @@ public abstract class DeclarativeContract extends BaseContract {
   protected final void processAnnotationOnMethod(MethodMetadata data,
                                                  Annotation annotation,
                                                  Method method) {
+    //遍历已注册的处理器，收集可以处理该注解的处理器
     List<GuardedAnnotationProcessor> processors = methodAnnotationProcessors.stream()
         .filter(processor -> processor.test(annotation))
         .collect(Collectors.toList());
 
+    //依次处理该注解
     if (!processors.isEmpty()) {
       processors.forEach(processor -> processor.process(annotation, data));
     } else {
@@ -114,17 +119,20 @@ public abstract class DeclarativeContract extends BaseContract {
   protected final boolean processAnnotationsOnParameter(MethodMetadata data,
                                                         Annotation[] annotations,
                                                         int paramIndex) {
+    //遍历，找到可以被注册的参数处理器处理的参数注解
     List<Annotation> matchingAnnotations = Arrays.stream(annotations)
         .filter(
             annotation -> parameterAnnotationProcessors.containsKey(annotation.annotationType()))
         .collect(Collectors.toList());
 
     if (!matchingAnnotations.isEmpty()) {
+      //依次处理
       matchingAnnotations.forEach(annotation -> parameterAnnotationProcessors
           .getOrDefault(annotation.annotationType(), ParameterAnnotationProcessor.DO_NOTHING)
           .process(annotation, data, paramIndex));
 
     } else {
+      //警告信息
       final Parameter parameter = data.method().getParameters()[paramIndex];
       String parameterName = parameter.isNamePresent()
           ? parameter.getName()
@@ -150,9 +158,9 @@ public abstract class DeclarativeContract extends BaseContract {
 
   /**
    * Called while class annotations are being processed
-   *
-   * @param annotationType to be processed
-   * @param processor function that defines the annotations modifies {@link MethodMetadata}
+   * 该方法约定了参数的泛型
+   * @param annotationType to be processed 第一个为要注册的注解
+   * @param processor function that defines the annotations modifies {@link MethodMetadata} 第二个为要处理该注解的处理器
    */
   protected <E extends Annotation> void registerClassAnnotation(Class<E> annotationType,
                                                                 DeclarativeContract.AnnotationProcessor<E> processor) {
@@ -174,9 +182,9 @@ public abstract class DeclarativeContract extends BaseContract {
 
   /**
    * Called while method annotations are being processed
-   *
-   * @param annotationType to be processed
-   * @param processor function that defines the annotations modifies {@link MethodMetadata}
+   * 该方法约定了参数的泛型
+   * @param annotationType to be processed 第一个为要注册的注解
+   * @param processor function that defines the annotations modifies {@link MethodMetadata} 第二个为要处理该注解的处理器
    */
   protected <E extends Annotation> void registerMethodAnnotation(Class<E> annotationType,
                                                                  DeclarativeContract.AnnotationProcessor<E> processor) {

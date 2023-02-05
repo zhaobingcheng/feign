@@ -46,6 +46,7 @@ public interface Contract {
   abstract class BaseContract implements Contract {
 
     /**
+     * 将api客户端模板接口中的各个接口api方法解析出来
      * @param targetType {@link feign.Target#type() type} of the Feign interface.
      * @see #parseAndValidateMetadata(Class)
      */
@@ -56,13 +57,18 @@ public interface Contract {
       checkState(targetType.getInterfaces().length <= 1, "Only single inheritance supported: %s",
           targetType.getSimpleName());
       final Map<String, MethodMetadata> result = new LinkedHashMap<String, MethodMetadata>();
+      //遍历api客户端模板接口中的方法
       for (final Method method : targetType.getMethods()) {
         if (method.getDeclaringClass() == Object.class ||
             (method.getModifiers() & Modifier.STATIC) != 0 ||
             Util.isDefault(method)) {
+          //无视object的方法，静态的方法，默认方法
           continue;
         }
+        //解析单个模板接口中的方法
         final MethodMetadata metadata = parseAndValidateMetadata(targetType, method);
+
+        //出现重复key的方法
         if (result.containsKey(metadata.configKey())) {
           MethodMetadata existingMetadata = result.get(metadata.configKey());
           Type existingReturnType = existingMetadata.returnType();
@@ -73,6 +79,8 @@ public interface Contract {
           }
           continue;
         }
+
+        //加入集合
         result.put(metadata.configKey(), metadata);
       }
       return new ArrayList<>(result.values());
@@ -97,16 +105,20 @@ public interface Contract {
           Types.resolve(targetType, targetType, method.getGenericReturnType()));
       data.configKey(Feign.configKey(targetType, method));
       if (AlwaysEncodeBodyContract.class.isAssignableFrom(this.getClass())) {
+        //AlwaysEncodeBodyContract及其子类
         data.alwaysEncodeBody(true);
       }
 
       if (targetType.getInterfaces().length == 1) {
+        //父接口上的类注解
         processAnnotationOnClass(data, targetType.getInterfaces()[0]);
       }
+      //类上的注解
       processAnnotationOnClass(data, targetType);
 
 
       for (final Annotation methodAnnotation : method.getAnnotations()) {
+        //依次处理方法上的注解
         processAnnotationOnMethod(data, methodAnnotation, method);
       }
       if (data.isIgnored()) {
@@ -116,13 +128,16 @@ public interface Contract {
           "Method %s not annotated with HTTP method type (ex. GET, POST)%s",
           data.configKey(), data.warnings());
       final Class<?>[] parameterTypes = method.getParameterTypes();
+      //比起上面可多获取到参数化类型中的泛型信息
       final Type[] genericParameterTypes = method.getGenericParameterTypes();
 
       final Annotation[][] parameterAnnotations = method.getParameterAnnotations();
       final int count = parameterAnnotations.length;
+      //处理方法的参数
       for (int i = 0; i < count; i++) {
         boolean isHttpAnnotation = false;
         if (parameterAnnotations[i] != null) {
+          //处理参数上的注解，返回固定为false
           isHttpAnnotation = processAnnotationsOnParameter(data, parameterAnnotations[i], i);
         }
 
@@ -135,6 +150,7 @@ public interface Contract {
         }
 
         if (parameterTypes[i] == URI.class) {
+          //如果有uri类型的参数，则标记其为url
           data.urlIndex(i);
         } else if (!isHttpAnnotation
             && !Request.Options.class.isAssignableFrom(parameterTypes[i])) {
@@ -156,6 +172,7 @@ public interface Contract {
         }
       }
 
+      //校验HeaderMap参数的类型
       if (data.headerMapIndex() != null) {
         // check header map parameter for map type
         if (Map.class.isAssignableFrom(parameterTypes[data.headerMapIndex()])) {
@@ -163,6 +180,7 @@ public interface Contract {
         }
       }
 
+      //校验QueryMap参数的类型
       if (data.queryMapIndex() != null) {
         if (Map.class.isAssignableFrom(parameterTypes[data.queryMapIndex()])) {
           checkMapKeys("QueryMap", genericParameterTypes[data.queryMapIndex()]);
@@ -247,30 +265,41 @@ public interface Contract {
   }
 
   class Default extends DeclarativeContract {
-
+    //@RequestLine("GET /api/{key}")
     static final Pattern REQUEST_LINE_PATTERN = Pattern.compile("^([A-Z]+)[ ]*(.*)$");
 
     public Default() {
-      super.registerClassAnnotation(Headers.class, (header, data) -> {
+      /*注册加在类上的header注解*/
+      //注意：第二个参数是处理器匿名类，里面的逻辑为处理器逻辑，其调用在别的地方，不是下面这里
+      super.registerClassAnnotation(Headers.class, (header, data) -> {//参数列表：E annotation, MethodMetadata metadata
+        //提取注解里的数组参数
         final String[] headersOnType = header.value();
+        //校验至少有一个参数
         checkState(headersOnType.length > 0, "Headers annotation was empty on type %s.",
             data.configKey());
+        //将header字符串数组转成map（headerKey:[headerValue1,headerValue2]）
         final Map<String, Collection<String>> headers = toMap(headersOnType);
+
+        //聚合MethodMetadata.template()里原本的header数据，再替换
         headers.putAll(data.template().headers());
         data.template().headers(null); // to clear
         data.template().headers(headers);
       });
+
+      /*注册加在方法上的RequestLine注解*/
       super.registerMethodAnnotation(RequestLine.class, (ann, data) -> {
         final String requestLine = ann.value();
         checkState(emptyToNull(requestLine) != null,
             "RequestLine annotation was empty on method %s.", data.configKey());
 
+        //校验uri参数规则
         final Matcher requestLineMatcher = REQUEST_LINE_PATTERN.matcher(requestLine);
         if (!requestLineMatcher.find()) {
           throw new IllegalStateException(String.format(
               "RequestLine annotation didn't start with an HTTP verb on method %s",
               data.configKey()));
         } else {
+          //提取出uri参数中的http方法和uri
           data.template().method(HttpMethod.valueOf(requestLineMatcher.group(1)));
           data.template().uri(requestLineMatcher.group(2));
         }
@@ -278,38 +307,56 @@ public interface Contract {
         data.template()
             .collectionFormat(ann.collectionFormat());
       });
+
+      /*注册加在方法上的Body注解*/
       super.registerMethodAnnotation(Body.class, (ann, data) -> {
         final String body = ann.value();
         checkState(emptyToNull(body) != null, "Body annotation was empty on method %s.",
             data.configKey());
+
+        // json curly braces must be escaped!
+        //  @Body("%7B\"user_name\": \"{user_name}\", \"password\": \"{password}\"%7D")
         if (body.indexOf('{') == -1) {
+          //如果body体里无“{”，则代表无参数，直接作为请求体
           data.template().body(body);
         } else {
+          //如果body体里有“{”，则代表有参数，作为请求体模板
           data.template().bodyTemplate(body);
         }
       });
+
+      /*注册加在方法上的Headers注解*/
       super.registerMethodAnnotation(Headers.class, (header, data) -> {
         final String[] headersOnMethod = header.value();
         checkState(headersOnMethod.length > 0, "Headers annotation was empty on method %s.",
             data.configKey());
         data.template().headers(toMap(headersOnMethod));
       });
+
+      /*注册加在参数上的Param注解*/
       super.registerParameterAnnotation(Param.class, (paramAnnotation, data, paramIndex) -> {
         final String annotationName = paramAnnotation.value();
         final Parameter parameter = data.method().getParameters()[paramIndex];
         final String name;
+        //@Param注解参数所要替换的模板变量名
         if (emptyToNull(annotationName) == null && parameter.isNamePresent()) {
+          //如果注解没有指定名字，使用变量名
           name = parameter.getName();
         } else {
           name = annotationName;
         }
         checkState(emptyToNull(name) != null, "Param annotation was empty on param %s.",
             paramIndex);
+
+        //
         nameParam(data, name, paramIndex);
+
+        //
         final Class<? extends Param.Expander> expander = paramAnnotation.expander();
         if (expander != Param.ToStringExpander.class) {
           data.indexToExpanderClass().put(paramIndex, expander);
         }
+        //
         if (!data.template().hasRequestVariable(name)) {
           data.formParams().add(name);
         }
@@ -327,14 +374,18 @@ public interface Contract {
     }
 
     private static Map<String, Collection<String>> toMap(String[] input) {
+      //将header数组转换成支持重复header值的map结构（headerKey:[headerValue1,headerValue2]）
       final Map<String, Collection<String>> result =
           new LinkedHashMap<String, Collection<String>>(input.length);
       for (final String header : input) {
+        //通过冒号识别header的键和值
         final int colon = header.indexOf(':');
         final String name = header.substring(0, colon);
         if (!result.containsKey(name)) {
+          //没有该header时初始化
           result.put(name, new ArrayList<String>(1));
         }
+        //将该header值追加到值列表后面
         result.get(name).add(header.substring(colon + 1).trim());
       }
       return result;

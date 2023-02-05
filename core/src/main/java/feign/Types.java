@@ -203,6 +203,7 @@ public final class Types {
     // This implementation is made a little more complicated in an attempt to avoid object-creation.
     while (true) {
       if (toResolve instanceof TypeVariable) {
+        //泛型变量T
         TypeVariable<?> typeVariable = (TypeVariable<?>) toResolve;
         toResolve = resolveTypeVariable(context, contextRawType, typeVariable);
         if (toResolve == typeVariable) {
@@ -210,6 +211,7 @@ public final class Types {
         }
 
       } else if (toResolve instanceof Class && ((Class<?>) toResolve).isArray()) {
+        //数组
         Class<?> original = (Class<?>) toResolve;
         Type componentType = original.getComponentType();
         Type newComponentType = resolve(context, contextRawType, componentType);
@@ -218,6 +220,7 @@ public final class Types {
                 newComponentType);
 
       } else if (toResolve instanceof GenericArrayType) {
+        //泛型数组T[]
         GenericArrayType original = (GenericArrayType) toResolve;
         Type componentType = original.getGenericComponentType();
         Type newComponentType = resolve(context, contextRawType, componentType);
@@ -226,6 +229,7 @@ public final class Types {
                 newComponentType);
 
       } else if (toResolve instanceof ParameterizedType) {
+        //参数化类型List<T>
         ParameterizedType original = (ParameterizedType) toResolve;
         Type ownerType = original.getOwnerType();
         Type newOwnerType = resolve(context, contextRawType, ownerType);
@@ -248,6 +252,7 @@ public final class Types {
             : original;
 
       } else if (toResolve instanceof WildcardType) {
+        //通配符类型? extends classA
         WildcardType original = (WildcardType) toResolve;
         Type[] originalLowerBound = original.getLowerBounds();
         Type[] originalUpperBound = original.getUpperBounds();
@@ -266,6 +271,7 @@ public final class Types {
         return original;
 
       } else {
+        //普通
         return toResolve;
       }
     }
@@ -308,6 +314,7 @@ public final class Types {
 
   public static Type resolveReturnType(Type baseType, Type overridingType) {
     if (baseType instanceof Class && overridingType instanceof Class &&
+            //父.isAssignableFrom(子)
         ((Class<?>) baseType).isAssignableFrom((Class<?>) overridingType)) {
       // NOTE: javac generates multiple same methods for multiple inherited generic interfaces
       return overridingType;

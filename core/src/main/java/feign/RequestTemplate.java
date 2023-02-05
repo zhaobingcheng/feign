@@ -39,6 +39,7 @@ public final class RequestTemplate implements Serializable {
   private static final Pattern QUERY_STRING_PATTERN = Pattern.compile("(?<!\\{)\\?");
   private final Map<String, QueryTemplate> queries = new LinkedHashMap<>();
   private final Map<String, HeaderTemplate> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+  //域名
   private String target;
   private String fragment;
   private boolean resolved = false;
@@ -489,6 +490,7 @@ public final class RequestTemplate implements Serializable {
     if (!UriUtils.isAbsolute(target)) {
       throw new IllegalArgumentException("target values must be absolute.");
     }
+    //去掉域名末尾斜杠
     if (target.endsWith("/")) {
       target = target.substring(0, target.length() - 1);
     }
@@ -497,6 +499,7 @@ public final class RequestTemplate implements Serializable {
       URI targetUri = URI.create(target);
 
       if (Util.isNotBlank(targetUri.getRawQuery())) {
+        //域名后存在查询参数
         /*
          * target has a query string, we need to make sure that they are recorded as queries
          */
@@ -504,6 +507,7 @@ public final class RequestTemplate implements Serializable {
       }
 
       /* strip the query string */
+      //http://local/aaa/bb
       this.target = targetUri.getScheme() + "://" + targetUri.getAuthority() + targetUri.getPath();
       if (targetUri.getFragment() != null) {
         this.fragment = "#" + targetUri.getFragment();
@@ -783,6 +787,13 @@ public final class RequestTemplate implements Serializable {
    */
   public RequestTemplate headers(Map<String, Collection<String>> headers) {
     if (headers != null && !headers.isEmpty()) {
+//      for (Map.Entry<String, Collection<String>> entry : headers.entrySet()) {
+//        String k;
+//        Collection<String> v;
+//        k = entry.getKey();
+//        v = entry.getValue();
+//        header(k, v);
+//      }
       headers.forEach(this::header);
     } else {
       this.headers.clear();

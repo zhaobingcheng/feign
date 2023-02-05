@@ -132,6 +132,7 @@ final class SynchronousMethodHandler implements MethodHandler {
     for (RequestInterceptor interceptor : requestInterceptors) {
       interceptor.apply(template);
     }
+    //根据请求模板生成请求实体
     return target.apply(template);
   }
 

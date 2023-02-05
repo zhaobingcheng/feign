@@ -98,8 +98,10 @@ public interface Target<T> {
     @Override
     public Request apply(RequestTemplate input) {
       if (input.url().indexOf("http") != 0) {
+        //请求模板的url不是http开头的，初始化
         input.target(url());
       }
+      //根据请求模板生成一个携带请求信息的请求实体，用于提交给client发送请求
       return input.request();
     }
 

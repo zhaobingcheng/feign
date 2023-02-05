@@ -31,5 +31,9 @@ public @interface RequestLine {
 
   boolean decodeSlash() default true;
 
+  /**
+   * 集合参数的格式
+   * @return
+   */
   CollectionFormat collectionFormat() default CollectionFormat.EXPLODED;
 }

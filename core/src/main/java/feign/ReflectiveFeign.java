@@ -247,6 +247,7 @@ public class ReflectiveFeign<C> extends Feign {
             value = expandElements(indexToExpander.get(i), value);
           }
           for (String name : entry.getValue()) {
+            //参数所要替换的变量名：参数值
             varBuilder.put(name, value);
           }
         }

@@ -36,6 +36,7 @@ public final class MethodMetadata implements Serializable {
   private transient Type bodyType;
   private final RequestTemplate template = new RequestTemplate();
   private final List<String> formParams = new ArrayList<String>();
+  //参数在方法中的位置：[参数所要替换的变量名]
   private final Map<Integer, Collection<String>> indexToName =
       new LinkedHashMap<Integer, Collection<String>>();
   private final Map<Integer, Class<? extends Expander>> indexToExpanderClass =

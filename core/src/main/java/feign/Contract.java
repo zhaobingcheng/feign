@@ -348,7 +348,7 @@ public interface Contract {
         checkState(emptyToNull(name) != null, "Param annotation was empty on param %s.",
             paramIndex);
 
-        //
+        //将变量名和参数在方法签名中的位置建立索引
         nameParam(data, name, paramIndex);
 
         //
